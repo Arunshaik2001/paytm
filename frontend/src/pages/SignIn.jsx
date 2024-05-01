@@ -5,10 +5,15 @@ import LinkText from "../components/LinkText";
 import { useSetRecoilState } from "recoil";
 import { tokenAtom } from "../store/atoms/tokenAtom";
 import { userAtom } from "../store/atoms/userAtom";
+import axios from "axios";
+import { BASE_URL } from "../../config";
+import { useNavigate } from "react-router-dom";
 
 export default function SignIn() {
   const setToken = useSetRecoilState(tokenAtom);
   const setCurrentUser = useSetRecoilState(userAtom);
+  const navigate = useNavigate();
+  const formData = {};
   return (
     <div className="flex justify-center bg-slate-300 rounded-md flex-col items-center px-10 h-screen">
       <div className="bg-white flex justify-center flex-col px-10 rounded-2xl items-center">
@@ -16,11 +21,20 @@ export default function SignIn() {
           title={"SignIn"}
           description={"Enter Your Information to login"}
         />
-        <InputBoxWithLabel label={"Email"} placeholder={"Enter email"} />
+        <InputBoxWithLabel
+          label={"Email"}
+          placeholder={"Enter email"}
+          onChange={(value) => {
+            formData.userName = value.target.value;
+          }}
+        />
         <InputBoxWithLabel
           label={"Password"}
           placeholder={"Enter Password"}
           type={"password"}
+          onChange={(value) => {
+            formData.password = value.target.value;
+          }}
         />
 
         <Button

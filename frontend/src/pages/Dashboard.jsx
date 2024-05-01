@@ -26,8 +26,6 @@ export default function Dashboard() {
 
   const navigate = useNavigate();
 
-  console.log(users.state);
-
   return (
     <div className="w-screen">
       <div className="flex justify-between border-b border-gray-300 p-10 items-center">
@@ -57,7 +55,7 @@ export default function Dashboard() {
       </div>
       <div className="flex justify-between py-5 px-10 items-center">
         <div className="text-2xl font-bold">
-          Your Balance $
+          Your Balance Rs
           {userBalance.state == "hasValue" ? userBalance.contents.balance : "0"}
         </div>
       </div>
