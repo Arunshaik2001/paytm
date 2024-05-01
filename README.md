@@ -20,5 +20,4 @@ npm run dev
 
 ```
 
-
-[Screencast from 01-05-24 06:59:04 PM IST.webm](https://github.com/Arunshaik2001/paytm/assets/50947867/8e971801-83a1-4ca2-8a59-42ebd003cf62)
+[Screencast from 01-05-24 07:07:06 PM IST.webm](https://github.com/Arunshaik2001/paytm/assets/50947867/ba6184e1-99c4-4f05-9c2a-0dba3a31a70a)
