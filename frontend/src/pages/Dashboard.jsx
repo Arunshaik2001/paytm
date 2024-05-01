@@ -16,6 +16,12 @@ import { userBalanceSelector } from "../store/selectors/balanceSelector";
 import { tokenAtom } from "../store/atoms/tokenAtom";
 import { userAtom } from "../store/atoms/userAtom";
 
+let timer;
+function debounce(fn, timeout) {
+  clearTimeout(timer);
+  timer = setTimeout(fn, timeout);
+}
+
 export default function Dashboard() {
   const setInputState = useSetRecoilState(userSearchInputAtom);
   const setToken = useSetRecoilState(tokenAtom);
@@ -68,7 +74,9 @@ export default function Dashboard() {
           placeholder={"Search..."}
           onChange={(value) => {
             const input = value.target.value;
-            setInputState(input);
+            debounce(() => {
+              setInputState(input);
+            }, 500);
           }}
         />
 
