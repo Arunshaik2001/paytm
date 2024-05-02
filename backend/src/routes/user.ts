@@ -1,12 +1,14 @@
-const authMiddleware = require("../middlewares/authMiddleware");
+import authMiddleware from "../middlewares/authMiddleware";
+import { z } from "zod";
+import { sign } from "jsonwebtoken";
+import { Router } from "express";
+import { config } from "../../config";
+import { PrismaClient } from "@prisma/client";
 
-const express = require("express");
-const z = require("zod");
-const jwt = require("jsonwebtoken");
-const { User, Account } = require("../db/db");
-const { JWT_SECRET_KEY } = require("../config");
+const prisma = new PrismaClient();
 
-userRouter = express.Router();
+const JWT_SECRET_KEY = config.JWT_SECRET_KEY;
+let userRouter = Router();
 
 const signUpValidation = z.object({
   userName: z.string().email(),
@@ -29,28 +31,36 @@ const updateValidation = z.object({
 userRouter.post("/signUp", async (req, res, next) => {
   const result = signUpValidation.safeParse(req.body);
   if (result.success) {
-    const existingUser = await User.findOne({
-      userName: req.body.userName,
+    console.log("/signup");
+    const existingUser = await prisma.user.findFirst({
+      where: {
+        userName: req.body.userName,
+      },
     });
-
+    console.log(existingUser);
     if (existingUser) {
       return res.status(411).json({
         message: "Email already taken/Incorrect inputs",
       });
     }
-    const user = await User.create(req.body);
-    const token = jwt.sign({ userId: user._id }, JWT_SECRET_KEY);
+    const user = await prisma.user.create({
+      data: req.body,
+    });
+    console.log(user);
+    const token = sign({ userId: user.id }, JWT_SECRET_KEY);
 
-    await Account.create({
-      userId: user,
-      balance: Math.floor(Math.random() * 10000) + 1,
+    await prisma.account.create({
+      data: {
+        balance: Math.floor(Math.random() * 10000) + 1,
+        userId: user.id,
+      },
     });
 
     res
       .json({
         message: "User created successfully",
         token: token,
-        currentUser: user._id,
+        currentUser: user.id,
       })
       .status(201);
   } else {
@@ -66,8 +76,10 @@ userRouter.post("/signUp", async (req, res, next) => {
 userRouter.post("/signIn", async (req, res, next) => {
   const result = signInValidation.safeParse(req.body);
   if (result.success) {
-    const existingUser = await User.findOne({
-      username: req.body.username,
+    const existingUser = await prisma.user.findFirst({
+      where: {
+        userName: req.body.userName,
+      },
     });
 
     if (!existingUser) {
@@ -76,12 +88,12 @@ userRouter.post("/signIn", async (req, res, next) => {
       });
     }
 
-    const token = jwt.sign({ userId: existingUser._id }, JWT_SECRET_KEY);
+    const token = sign({ userId: existingUser.id }, JWT_SECRET_KEY);
 
     res
       .json({
         token: token,
-        currentUser: existingUser._id,
+        currentUser: existingUser.id,
       })
       .status(200);
   } else {
@@ -100,15 +112,15 @@ userRouter.put("/update", authMiddleware, async (req, res, next) => {
     const result = updateValidation.safeParse(req.body);
 
     if (result.success) {
-      const user = await User.findOneAndUpdate(
-        {
-          _id: userId,
+      const user = await prisma.user.update({
+        where: {
+          id: userId,
         },
-        req.body
-      );
+        data: req.body,
+      });
 
       res.status(200).json({
-        message: "Updated profile" + userId + user.userName,
+        message: "Updated profile" + userId + user!.userName,
       });
     }
   } catch (error) {
@@ -118,8 +130,10 @@ userRouter.put("/update", authMiddleware, async (req, res, next) => {
 
 userRouter.get("/userDetail/:userId", authMiddleware, async (req, res) => {
   try {
-    const user = await User.findOne({
-      _id: req.params.userId,
+    const user = await prisma.user.findFirst({
+      where: {
+        id: parseInt(req.params.userId),
+      },
     });
 
     res.status(200).json({
@@ -135,16 +149,26 @@ userRouter.get("/bulk", authMiddleware, async (req, res, next) => {
     const filter = req.query.filter ?? "";
     const userId = res.locals.userId;
 
-    const users = await User.find({
-      $and: [
-        { _id: { $ne: userId } }, // Exclude user with the provided id
-        {
-          $or: [
-            { firstName: { $regex: filter, $options: "i" } }, // Case-insensitive search
-            { lastName: { $regex: filter, $options: "i" } },
-          ],
+    const users = await prisma.user.findMany({
+      where: {
+        NOT: {
+          id: userId, 
         },
-      ],
+        OR: [
+          {
+            firstName: {
+              contains: filter as string,
+              mode: "insensitive",
+            },
+          },
+          {
+            lastName: {
+              contains: filter as string,
+              mode: "insensitive",
+            },
+          },
+        ],
+      },
     });
 
     res.status(200).json({
@@ -155,4 +179,4 @@ userRouter.get("/bulk", authMiddleware, async (req, res, next) => {
   }
 });
 
-module.exports = userRouter;
+export default userRouter;

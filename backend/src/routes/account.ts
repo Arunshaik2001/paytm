@@ -1,18 +1,18 @@
-const authMiddleware = require("../middlewares/authMiddleware");
+import authMiddleware from "../middlewares/authMiddleware";
+import { Router } from "express";
+import { PrismaClient } from "@prisma/client";
 
-const express = require("express");
-const z = require("zod");
-const jwt = require("jsonwebtoken");
-const { User, Account } = require("../db/db");
-
-accountRouter = express.Router();
+const accountRouter = Router();
+const prisma = new PrismaClient();
 
 accountRouter.get("/balance", authMiddleware, async (req, res, next) => {
   try {
     const userId = res.locals.userId;
     const user = req.body.userId ?? userId;
-    const account = await Account.findOne({
-      userId: user,
+    const account = await prisma.account.findFirst({
+      where: {
+        userId: user,
+      },
     });
 
     if (account) {
@@ -29,22 +29,32 @@ accountRouter.get("/balance", authMiddleware, async (req, res, next) => {
 
 accountRouter.post("/transfer", authMiddleware, async (req, res) => {
   try {
-    const { amount, to } = req.body;
+    const {
+      amount,
+      to,
+    }: {
+      amount: number;
+      to: number;
+    } = req.body;
     const userId = res.locals.userId;
     console.log(userId);
 
-    const account = await Account.findOne({
-      userId: userId,
+    const account = await prisma.account.findFirst({
+      where: {
+        userId: userId,
+      },
     });
 
-    if (account.balance < amount) {
+    if (account!.balance < amount) {
       return res.status(400).json({
         message: "Insufficient balance",
       });
     }
 
-    const toAccount = await Account.findOne({
-      userId: to,
+    const toAccount = await prisma.account.findFirst({
+      where: {
+        userId: to,
+      },
     });
 
     if (!toAccount) {
@@ -53,27 +63,27 @@ accountRouter.post("/transfer", authMiddleware, async (req, res) => {
       });
     }
 
-    await Account.updateOne(
-      {
+    await prisma.account.update({
+      where: {
         userId: to,
       },
-      {
-        $inc: {
-          balance: amount,
+      data: {
+        balance: {
+          increment: amount,
         },
-      }
-    );
+      },
+    });
 
-    await Account.updateOne(
-      {
+    await prisma.account.update({
+      where: {
         userId: userId,
       },
-      {
-        $inc: {
-          balance: -amount,
+      data: {
+        balance: {
+          decrement: amount,
         },
-      }
-    );
+      },
+    });
 
     res.json({
       message: "Transfer successful",
@@ -84,4 +94,5 @@ accountRouter.post("/transfer", authMiddleware, async (req, res) => {
     });
   }
 });
-module.exports = accountRouter;
+
+export default accountRouter;
